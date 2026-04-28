@@ -3,21 +3,21 @@ from random import choice, randint
 ALPHABET = {"A", "C", "G", "T"}
 PATTERNS = ["AGATTA", "ACTTTGCA", "AACTGGCAA", "CATTCAGT"]
 
-a_min, a_max = 1, 3
-b_min, b_max = 0, 2
-c_min, c_max = 1, 2
+A_MIN, A_MAX = 1, 3
+B_MIN, B_MAX = 0, 2
+C_MIN, C_MAX = 1, 3
 
 
 def generate_string():
     output = ""
 
-    a_count = randint(a_min, a_max)
+    a_count = randint(A_MIN, A_MAX)
     for _ in range(a_count):
         output += choice(list(ALPHABET))
 
     for pattern in PATTERNS:
         mutated = pattern
-        b_count = randint(b_min, b_max)
+        b_count = randint(B_MIN, B_MAX)
         for _ in range(b_count):
             index = randint(0, len(mutated) - 1)
             mutated = (
@@ -27,7 +27,7 @@ def generate_string():
             )
         output += mutated
 
-    c_count = randint(c_min, c_max)
+    c_count = randint(C_MIN, C_MAX)
     for _ in range(c_count):
         output += choice(list(ALPHABET))
 
