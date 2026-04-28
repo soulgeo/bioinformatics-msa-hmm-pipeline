@@ -1,7 +1,7 @@
-from random import randint
+from random import choice, randint
 
-alphabet = ["A", "C", "G", "T", ""]
-patterns = ["ATTAGA", "ΑCGCΑTΤT", "ΑGGACTCAA", "ATTTCAGT"]
+alphabet = {"A", "C", "G", "T"}
+patterns = ["ΑGAΤΤΑ", "ΑCTTTGCΑ", "ΑACTGGCAA", "CATTCAGT"]
 
 a_min, a_max = 1, 3
 b_min, b_max = 1, 2
@@ -11,25 +11,24 @@ c_min, c_max = 1, 2
 def generate_string():
     out = ""
 
-    # part a
     a_count = randint(a_min, a_max)
-    for _ in range(0, a_count):
-        out += alphabet[randint(0, 3)]
+    for _ in range(a_count):
+        out += choice(list(alphabet))
 
-    # part b
-    for p in patterns:
-        mutated = p
+    for pattern in patterns:
+        mutated = pattern
         b_count = randint(b_min, b_max)
-        for _ in range(0, b_count):
-            idx = randint(0, len(mutated) - 1)
+        for _ in range(b_count):
+            index = randint(0, len(mutated) - 1)
             mutated = (
-                mutated[:idx] + alphabet[randint(0, 4)] + mutated[idx + 1 :]
+                mutated[:index]
+                + choice(list(alphabet | {""}))
+                + mutated[index + 1 :]
             )
         out += mutated
 
-    # part c
     c_count = randint(c_min, c_max)
-    for _ in range(0, c_count):
-        out += alphabet[randint(0, 3)]
+    for _ in range(c_count):
+        out += choice(list(alphabet))
 
     return out
