@@ -4,7 +4,7 @@ ALPHABET = {"A", "C", "G", "T"}
 PATTERNS = ["AGAΤΤA", "ACTTTGCA", "AACTGGCAA", "CATTCAGT"]
 
 a_min, a_max = 1, 3
-b_min, b_max = 1, 2
+b_min, b_max = 0, 2
 c_min, c_max = 1, 2
 
 
