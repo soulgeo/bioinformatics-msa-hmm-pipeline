@@ -10,12 +10,12 @@ C_MIN, C_MAX = 1, 3
 
 
 def generate_gene():
-    output = ""
+    gene = ""
 
     # a) random symbols at the beginning
     a_count = random.randint(A_MIN, A_MAX)
     for _ in range(a_count):
-        output += random.choice(list(ALPHABET))
+        gene += random.choice(list(ALPHABET))
 
     # b) process patterns with mutations
     a_count = random.randint(A_MIN, A_MAX)
@@ -29,19 +29,19 @@ def generate_gene():
                 + random.choice(list(ALPHABET | {""}))
                 + mutated[index + 1 :]
             )
-        output += mutated
+        gene += mutated
 
     # c) random symbols at the end
     c_count = random.randint(C_MIN, C_MAX)
     for _ in range(c_count):
-        output += random.choice(list(ALPHABET))
+        gene += random.choice(list(ALPHABET))
 
-    return output
+    return gene
 
 
-def remove_sampled_genes(original, sampled):
-    counts = Counter(original)
-    to_remove = Counter(sampled)
+def remove_sampled_genes(original_list, sampled_list):
+    counts = Counter(original_list)
+    to_remove = Counter(sampled_list)
 
     remaining_counts = counts - to_remove
 
@@ -51,11 +51,11 @@ def remove_sampled_genes(original, sampled):
 def generate_datasets(*args: int):
     genes = []
     for _ in range(sum(args)):
-        genes += [generate_gene()]
+        genes.append(generate_gene())
 
     datasets = []
-    for i, val in enumerate(args):
-        datasets += [random.sample(genes, val)]
+    for i, arg in enumerate(args):
+        datasets.append(random.sample(genes, arg))
         genes = remove_sampled_genes(genes, datasets[i])
 
     return datasets
