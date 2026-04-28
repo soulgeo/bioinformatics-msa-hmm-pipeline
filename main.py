@@ -9,7 +9,9 @@ C_COUNT = 40
 def create_datasets():
     if not os.path.exists("datasets"):
         os.makedirs("datasets")
+
     datasets = generate_datasets(A_COUNT, B_COUNT, C_COUNT)
+
     for i, dataset in enumerate(datasets):
         letter = chr(ord('`') + i + 1)
         filename = f"datasets/dataset_{letter}.txt"
