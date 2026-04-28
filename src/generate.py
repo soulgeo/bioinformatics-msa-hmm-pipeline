@@ -1,7 +1,7 @@
 from random import choice, randint
 
 ALPHABET = {"A", "C", "G", "T"}
-PATTERNS = ["ΑGAΤΤΑ", "ΑCTTTGCΑ", "ΑACTGGCAA", "CATTCAGT"]
+PATTERNS = ["AGAΤΤA", "ACTTTGCA", "AACTGGCAA", "CATTCAGT"]
 
 a_min, a_max = 1, 3
 b_min, b_max = 1, 2
