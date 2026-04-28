@@ -61,3 +61,37 @@ def align_pair(seq1, seq2):
     output1 = ''.join(reversed(alignment1))
     output2 = ''.join(reversed(alignment2))
     return output1, output2
+
+
+def align_multiple_sequences(sequences):
+    if len(sequences) < 2:
+        return sequences
+
+    if len(sequences) == 2:
+        return align_pair(sequences[0], sequences[1])
+
+    c, other_sequences = sequences[0], sequences[1:]
+
+    aligned = [c]
+    for seq in other_sequences:
+        aligned_c, aligned_seq = align_pair(c, seq)
+
+        new_gap_indices = [i for i, char in enumerate(aligned_c) if char == "-"]
+
+        current_gap_indices = [idx for idx, char in enumerate(aligned[0]) if char == "-"]
+
+        # Step A: Insert old gaps in new alignment
+        temp_new_seq = list(aligned_seq)
+        for gap in sorted(current_gap_indices, reverse=True):
+            temp_new_seq.insert(gap, "-")
+
+        # Step B: Insert new gaps in old alignments
+        for i in range(len(aligned)):
+            temp_seq = list(aligned[i])
+            for gap in sorted(new_gap_indices, reverse=True):
+                temp_seq.insert(gap, "-")
+            aligned[i] = "".join(temp_seq)
+
+        aligned.append("".join(temp_new_seq))
+
+    return aligned
