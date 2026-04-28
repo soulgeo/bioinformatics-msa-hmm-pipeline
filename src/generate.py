@@ -17,7 +17,7 @@ def generate_gene():
     for _ in range(a_count):
         output += random.choice(list(ALPHABET))
 
-    # b) process pattern with mutations
+    # b) process patterns with mutations
     a_count = random.randint(A_MIN, A_MAX)
     for pattern in PATTERNS:
         mutated = pattern

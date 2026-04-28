@@ -1,3 +1,4 @@
+import os
 from src.generate import generate_datasets
 
 A_COUNT = 20
@@ -6,16 +7,25 @@ C_COUNT = 40
 
 
 def create_datasets():
+    if not os.path.exists("datasets"):
+        os.makedirs("datasets")
     datasets = generate_datasets(A_COUNT, B_COUNT, C_COUNT)
     for i, dataset in enumerate(datasets):
         letter = chr(ord('`') + i + 1)
-        with open(f"datasets/dataset_{letter}.txt", "w") as f:
+        filename = f"datasets/dataset_{letter}.txt"
+        with open(filename, "w") as f:
             output = "\n".join(dataset)
             f.write(output)
 
 
 def main():
-    create_datasets()
+    expected_files = [
+        "datasets/dataset_a.txt",
+        "datasets/dataset_b.txt",
+        "datasets/dataset_c.txt",
+    ]
+    if not all(os.path.exists(f) for f in expected_files):
+        create_datasets()
 
 
 if __name__ == "__main__":
