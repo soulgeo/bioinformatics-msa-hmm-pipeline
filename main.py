@@ -1,6 +1,7 @@
 import os
-from src.alignment import align_multiple_sequences
+from src.alignment import msa
 from src.generate import generate_datasets
+from src.hmm import create_states_sequence
 
 A_COUNT = 20
 B_COUNT = 140
@@ -34,12 +35,15 @@ def main():
 
     file_a = open("datasets/dataset_a.txt", "r")
     for line in file_a:
-        dataset_a.append(line)
+        dataset_a.append(line.strip())
     file_a.close()
 
-    aligned_dataset_a = align_multiple_sequences(dataset_a)
+    aligned_dataset_a = msa(dataset_a)
     for seq in aligned_dataset_a:
         print(seq)
+
+    states = create_states_sequence(aligned_dataset_a)
+    print(''.join(states))
 
 
 if __name__ == "__main__":

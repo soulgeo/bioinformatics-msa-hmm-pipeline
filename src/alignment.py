@@ -14,7 +14,7 @@ def sim(char1, char2):
 
 
 def align_pair(seq1, seq2):
-    # Calculate the similarity matrix
+    # Step 1: Calculate the similarity matrix
     rows = len(seq1) + 1
     cols = len(seq2) + 1
     sim_matrix = np.empty((rows, cols))
@@ -30,7 +30,7 @@ def align_pair(seq1, seq2):
         insert = sim_matrix[i, j - 1] + DELTA
         sim_matrix[i, j] = max(match, delete, insert)
 
-    # Using the similarity matrix, find an optimal alignment
+    # Step 2: Using the similarity matrix, find an optimal alignment
     alignment1 = []
     alignment2 = []
 
@@ -63,7 +63,7 @@ def align_pair(seq1, seq2):
     return output1, output2
 
 
-def align_multiple_sequences(sequences):
+def msa(sequences):
     if len(sequences) < 2:
         return sequences
 
@@ -72,26 +72,29 @@ def align_multiple_sequences(sequences):
 
     c, other_sequences = sequences[0], sequences[1:]
 
-    aligned = [c]
+    msa = [c]
     for seq in other_sequences:
+        # Step 1: Align c and seq, find current and new gap indices of c
         aligned_c, aligned_seq = align_pair(c, seq)
 
         new_gap_indices = [i for i, char in enumerate(aligned_c) if char == "-"]
 
-        current_gap_indices = [idx for idx, char in enumerate(aligned[0]) if char == "-"]
+        current_gap_indices = [i for i, char in enumerate(msa[0]) if char == "-"]
 
-        # Step A: Insert old gaps in new alignment
+        # Step 2: Insert old gaps in new alignment
         temp_new_seq = list(aligned_seq)
         for gap in sorted(current_gap_indices, reverse=True):
             temp_new_seq.insert(gap, "-")
+        new_seq = "".join(temp_new_seq)
 
-        # Step B: Insert new gaps in old alignments
-        for i in range(len(aligned)):
-            temp_seq = list(aligned[i])
+        # Step 3: Insert new gaps in old alignments
+        for i in range(len(msa)):
+            temp_seq = list(msa[i])
             for gap in sorted(new_gap_indices, reverse=True):
                 temp_seq.insert(gap, "-")
-            aligned[i] = "".join(temp_seq)
+            msa[i] = "".join(temp_seq)
 
-        aligned.append("".join(temp_new_seq))
+        # Step 4: Append the new alignment to the list
+        msa.append(new_seq)
 
-    return aligned
+    return msa
