@@ -1,7 +1,13 @@
+import json
 import os
+
 from src.alignment import msa
 from src.generate import generate_datasets
-from src.hmm import calculate_emissions_matrix, calculate_transitions_matrix, create_states_sequence
+from src.hmm import (
+    calculate_emissions_matrix,
+    calculate_transitions_matrix,
+    create_states_sequence,
+)
 from src.util import print_float_table
 
 A_COUNT = 20
@@ -47,10 +53,10 @@ def main():
     print(''.join(states_seq), '\n')
 
     emissions = calculate_emissions_matrix(msa_a, states_seq)
-    print_float_table(emissions)
+    print(json.dumps(emissions, indent=2))
 
     transitions = calculate_transitions_matrix(msa_a, states_seq)
-    print_float_table(transitions)
+    print(json.dumps(transitions, indent=2))
 
 
 if __name__ == "__main__":
