@@ -1,4 +1,3 @@
-import json
 import os
 
 from src.training.alignment import msa
@@ -42,7 +41,7 @@ def main():
     datasets = {}
     for char in ['a', 'b', 'c']:
         datasets[char] = []
-        file = open("datasets/dataset_a.txt", "r")
+        file = open(f"datasets/dataset_{char}.txt", "r")
         for line in file:
             datasets[char].append(line.strip())
         file.close()
