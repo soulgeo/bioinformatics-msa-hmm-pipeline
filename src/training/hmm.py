@@ -1,4 +1,4 @@
-from src.generate import ALPHABET
+from src.generation.generate import ALPHABET
 from collections import defaultdict
 
 MATCH = "M"

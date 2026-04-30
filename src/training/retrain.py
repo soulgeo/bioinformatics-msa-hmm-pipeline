@@ -1,11 +1,11 @@
 from collections import defaultdict
-from src.generate import ALPHABET
+from src.generation.generate import ALPHABET
 
-def retrain_emissions_matrix(dataset_b, paths, num_matches):
+def retrain_emissions_matrix(dataset, paths, num_matches):
     emissions = defaultdict(lambda: defaultdict(float))
 
     # Step 1: Calculate the tallies using the unique paths
-    for seq, path in zip(dataset_b, paths):
+    for seq, path in zip(dataset, paths):
         char_index = 0
         
         for state in path:
