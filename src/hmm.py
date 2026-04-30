@@ -65,9 +65,39 @@ def calculate_emissions_matrix(msa, states_seq):
 
 
 def calculate_transitions_matrix(msa, states_seq):
-    transitions = defaultdict(lambda: defaultdict(float))
+    transitions = {}
+    num_matches = states_seq.count(MATCH)
 
-    # Step 1: Calculate the tallies
+    # Step 1: Pre-initialize the strict HMM topology
+    # 1a. Start state
+    transitions["Start"] = {"M1": 0.0, "D1": 0.0, "I0": 0.0}
+
+    # 1b. Build the connections for all I, M, and D states
+    for k in range(num_matches + 1):
+        
+        # Outgoing from Insert states
+        transitions[f"I{k}"] = {f"I{k}": 0.0} # Self-loop
+        if k < num_matches:
+            transitions[f"I{k}"][f"M{k+1}"] = 0.0
+            transitions[f"I{k}"][f"D{k+1}"] = 0.0
+        else:
+            transitions[f"I{k}"]["End"] = 0.0
+
+        # Outgoing from Match and Delete states
+        if k > 0:
+            transitions[f"M{k}"] = {f"I{k}": 0.0}
+            transitions[f"D{k}"] = {f"I{k}": 0.0}
+            
+            if k < num_matches:
+                transitions[f"M{k}"][f"M{k+1}"] = 0.0
+                transitions[f"M{k}"][f"D{k+1}"] = 0.0
+                transitions[f"D{k}"][f"M{k+1}"] = 0.0
+                transitions[f"D{k}"][f"D{k+1}"] = 0.0
+            else:
+                transitions[f"M{k}"]["End"] = 0.0
+                transitions[f"D{k}"]["End"] = 0.0
+
+    # Step 2: Calculate the tallies (Your exact logic here)
     for seq in msa:
         temp_state = "Start" 
         state_counter = 0
@@ -83,22 +113,19 @@ def calculate_transitions_matrix(msa, states_seq):
                 temp_state = current_state
                 continue
 
-            # Found a gap, go through DELETE state if in MATCH, ignore if in INSERT
             if current_type == MATCH:
                 current_state = f"D{state_counter}"
                 transitions[temp_state][current_state] += 1
                 temp_state = current_state
                 
-        # Transition to an "End" state when the sequence finishes
         transitions[temp_state]["End"] += 1
 
-    # Step 2: Convert tallies to probabilities
+    # Step 3: Convert tallies to probabilities
     pseudocount = 0.01
 
     for state, counts in transitions.items():
         total_transitions = sum(counts.values())
         
-        # Only apply the pseudocount multiplier to the valid outgoing transitions!
         valid_paths = len(counts) 
         divisor = total_transitions + (valid_paths * pseudocount)
 

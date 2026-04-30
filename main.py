@@ -8,7 +8,6 @@ from src.hmm import (
     calculate_transitions_matrix,
     create_states_sequence,
 )
-from src.util import print_float_table
 
 A_COUNT = 20
 B_COUNT = 140
