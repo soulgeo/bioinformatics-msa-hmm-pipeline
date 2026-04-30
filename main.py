@@ -1,7 +1,8 @@
 import os
 from src.alignment import msa
 from src.generate import generate_datasets
-from src.hmm import create_states_sequence
+from src.hmm import calculate_emissions_matrix, calculate_transitions_matrix, create_states_sequence
+from src.util import print_float_table
 
 A_COUNT = 20
 B_COUNT = 140
@@ -38,12 +39,18 @@ def main():
         dataset_a.append(line.strip())
     file_a.close()
 
-    aligned_dataset_a = msa(dataset_a)
-    for seq in aligned_dataset_a:
+    msa_a = msa(dataset_a)
+    for seq in msa_a:
         print(seq)
 
-    states = create_states_sequence(aligned_dataset_a)
-    print(''.join(states))
+    states_seq = create_states_sequence(msa_a)
+    print(''.join(states_seq), '\n')
+
+    emissions = calculate_emissions_matrix(msa_a, states_seq)
+    print_float_table(emissions)
+
+    transitions = calculate_transitions_matrix(msa_a, states_seq)
+    print_float_table(transitions)
 
 
 if __name__ == "__main__":
