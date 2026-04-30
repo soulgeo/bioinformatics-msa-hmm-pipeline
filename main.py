@@ -8,6 +8,7 @@ from src.hmm import (
     calculate_transitions_matrix,
     create_states_sequence,
 )
+from src.viterbi import viterbi
 
 A_COUNT = 20
 B_COUNT = 140
@@ -56,6 +57,17 @@ def main():
 
     transitions = calculate_transitions_matrix(msa_a, states_seq)
     print(json.dumps(transitions, indent=2))
+
+    dataset_b = []
+
+    file_b = open("datasets/dataset_b.txt", "r")
+    for line in file_b:
+        dataset_b.append(line.strip())
+    file_b.close()
+
+    for seq in dataset_b:
+        path = viterbi(seq, emissions, transitions)
+        print(f"Seq: {seq[:20]}... -> Path: {'-'.join(path[:10])}...")
 
 
 if __name__ == "__main__":
