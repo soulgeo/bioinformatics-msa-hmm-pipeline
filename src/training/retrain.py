@@ -1,5 +1,7 @@
 from collections import defaultdict
+
 from src.generation.generate import ALPHABET
+
 
 def retrain_emissions_matrix(dataset, paths, num_matches):
     emissions = defaultdict(lambda: defaultdict(float))
@@ -7,33 +9,36 @@ def retrain_emissions_matrix(dataset, paths, num_matches):
     # Step 1: Calculate the tallies using the unique paths
     for seq, path in zip(dataset, paths):
         char_index = 0
-        
+
         for state in path:
             # Delete states are silent, skip to the next state without moving char_index
             if state.startswith("D"):
                 continue
-                
+
             # M and I states emit the current character
             char = seq[char_index]
             emissions[state][char] += 1
-            char_index += 1  # Only advance the character when an emission happens!
+            char_index += (
+                1  # Only advance the character when an emission happens!
+            )
 
     # Step 2: Convert to probabilities (Same strict logic as before)
     pseudocount = 0.01
-    all_possible_states = [f"I{k}" for k in range(num_matches + 1)] + \
-                          [f"M{k}" for k in range(1, num_matches + 1)]
+    all_possible_states = [f"I{k}" for k in range(num_matches + 1)] + [
+        f"M{k}" for k in range(1, num_matches + 1)
+    ]
 
     final_emissions = {}
     for state in all_possible_states:
         counts = emissions[state]
         total_chars = sum(counts.values())
         divisor = total_chars + (len(ALPHABET) * pseudocount)
-        
+
         final_emissions[state] = {
-            letter: (counts.get(letter, 0) + pseudocount) / divisor 
+            letter: (counts.get(letter, 0) + pseudocount) / divisor
             for letter in ALPHABET
         }
-            
+
     return final_emissions
 
 
@@ -68,7 +73,7 @@ def retrain_transitions_matrix(paths, num_matches):
         for current_state in path:
             transitions[prev_state][current_state] += 1
             prev_state = current_state
-            
+
         # Don't forget the final jump to End!
         transitions[prev_state]["End"] += 1
 
@@ -76,7 +81,7 @@ def retrain_transitions_matrix(paths, num_matches):
     pseudocount = 0.01
     for state, counts in transitions.items():
         total_transitions = sum(counts.values())
-        valid_paths = len(counts) 
+        valid_paths = len(counts)
         divisor = total_transitions + (valid_paths * pseudocount)
 
         for next_state in counts.keys():

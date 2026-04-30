@@ -1,19 +1,20 @@
 import math
 
-from src.training.hmm import DELETE, INSERT, MATCH
+from src.settings import DELETE, INSERT, MATCH
+
 
 def log_sum_exp(log_probs):
     # If the list is empty, the probability is 0 (which is -inf in log space)
     if not log_probs:
         return -1e9
-        
+
     # Find the biggest number to factor out
     max_p = max(log_probs)
-    
+
     # If even the max is our "negative infinity", return it
     if max_p <= -1e9:
         return -1e9
-        
+
     # The Log-Sum-Exp formula
     sum_exp = sum(math.exp(p - max_p) for p in log_probs if p > -1e9)
     return max_p + math.log(sum_exp)
@@ -40,7 +41,7 @@ def viterbi(gene, emissions, transitions):
                 emissions[state][gene[0]]
             )
         else:
-            first_col[state] = -1e9 # Acts as -infinity for impossible paths
+            first_col[state] = -1e9  # Acts as -infinity for impossible paths
 
         # Initialize the path history for the first column
         path[state] = [state]
@@ -129,7 +130,9 @@ def forward_algorithm(gene, emissions, transitions):
     for state in states:
         prob = transitions["Start"].get(state, 0)
         if prob > 0 and state[0] != DELETE and gene[0] in emissions[state]:
-            first_col[state] = math.log(prob) + math.log(emissions[state][gene[0]])
+            first_col[state] = math.log(prob) + math.log(
+                emissions[state][gene[0]]
+            )
         else:
             first_col[state] = -1e9
     m.append(first_col)
@@ -140,36 +143,47 @@ def forward_algorithm(gene, emissions, transitions):
         curr_col = {}
 
         # HELPER: Returns the total summed score instead of the max score
-        def get_total_jump(target, possible_prevs, prev_matrix, is_delete=False):
+        def get_total_jump(
+            target, possible_prevs, prev_matrix, is_delete=False
+        ):
             candidates = []
             for p in possible_prevs:
-                if p in prev_matrix and (jump := transitions[p].get(target, 0)) > 0:
+                if (
+                    p in prev_matrix
+                    and (jump := transitions[p].get(target, 0)) > 0
+                ):
                     score = prev_matrix[p] + math.log(jump)
                     if not is_delete and char in emissions[target]:
                         score += math.log(emissions[target][char])
                     candidates.append(score)
-            
+
             return log_sum_exp(candidates)
 
         # PASS 1: Calculate M and I
         for state in states:
             s_type, num = state[0], int(state[1:])
             if s_type == MATCH:
-                curr_col[state] = get_total_jump(state, [f"M{num-1}", f"I{num-1}", f"D{num-1}"], m[i - 1])
+                curr_col[state] = get_total_jump(
+                    state, [f"M{num-1}", f"I{num-1}", f"D{num-1}"], m[i - 1]
+                )
             elif s_type == INSERT:
-                curr_col[state] = get_total_jump(state, [f"M{num}", state, f"D{num}"], m[i - 1])
+                curr_col[state] = get_total_jump(
+                    state, [f"M{num}", state, f"D{num}"], m[i - 1]
+                )
 
         # PASS 2: Calculate D
         for state in states:
             if state[0] == DELETE:
                 num = int(state[1:])
-                curr_col[state] = get_total_jump(state, [f"M{num-1}", f"D{num-1}"], curr_col, is_delete=True)
+                curr_col[state] = get_total_jump(
+                    state, [f"M{num-1}", f"D{num-1}"], curr_col, is_delete=True
+                )
 
         m.append(curr_col)
 
     # --- TERMINATION (Get the final sequence score) ---
     final_candidates = []
-    
+
     for state, score in m[-1].items():
         jump_to_end = transitions[state].get("End", 0)
         if jump_to_end > 0:

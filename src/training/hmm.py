@@ -1,9 +1,7 @@
-from src.generation.generate import ALPHABET
 from collections import defaultdict
 
-MATCH = "M"
-INSERT = "I"
-DELETE = "D"
+from src.generation.generate import ALPHABET
+from src.settings import INSERT, MATCH
 
 
 def create_states_sequence(msa):
@@ -47,20 +45,21 @@ def calculate_emissions_matrix(msa, states_seq):
 
     # Make sure all states exist in the final matrix, even unobserved ones.
     num_matches = states_seq.count(MATCH)
-    all_possible_states = [f"I{k}" for k in range(num_matches + 1)] + \
-                         [f"M{k}" for k in range(1, num_matches + 1)]
+    all_possible_states = [f"I{k}" for k in range(num_matches + 1)] + [
+        f"M{k}" for k in range(1, num_matches + 1)
+    ]
 
     final_emissions = {}
     for state in all_possible_states:
         counts = emissions[state]
         total_chars = sum(counts.values())
         divisor = total_chars + (len(ALPHABET) * pseudocount)
-        
+
         final_emissions[state] = {
-            letter: (counts[letter] + pseudocount) / divisor 
+            letter: (counts[letter] + pseudocount) / divisor
             for letter in ALPHABET
         }
-            
+
     return final_emissions
 
 
@@ -74,9 +73,9 @@ def calculate_transitions_matrix(msa, states_seq):
 
     # 1b. Build the connections for all I, M, and D states
     for k in range(num_matches + 1):
-        
+
         # Outgoing from Insert states
-        transitions[f"I{k}"] = {f"I{k}": 0.0} # Self-loop
+        transitions[f"I{k}"] = {f"I{k}": 0.0}  # Self-loop
         if k < num_matches:
             transitions[f"I{k}"][f"M{k+1}"] = 0.0
             transitions[f"I{k}"][f"D{k+1}"] = 0.0
@@ -87,7 +86,7 @@ def calculate_transitions_matrix(msa, states_seq):
         if k > 0:
             transitions[f"M{k}"] = {f"I{k}": 0.0}
             transitions[f"D{k}"] = {f"I{k}": 0.0}
-            
+
             if k < num_matches:
                 transitions[f"M{k}"][f"M{k+1}"] = 0.0
                 transitions[f"M{k}"][f"D{k+1}"] = 0.0
@@ -99,14 +98,14 @@ def calculate_transitions_matrix(msa, states_seq):
 
     # Step 2: Calculate the tallies (Your exact logic here)
     for seq in msa:
-        temp_state = "Start" 
+        temp_state = "Start"
         state_counter = 0
-        
+
         for i, char in enumerate(seq):
             current_type = states_seq[i]
             if current_type == MATCH:
                 state_counter += 1
-                
+
             if char != "-":
                 current_state = f"{current_type}{state_counter}"
                 transitions[temp_state][current_state] += 1
@@ -117,7 +116,7 @@ def calculate_transitions_matrix(msa, states_seq):
                 current_state = f"D{state_counter}"
                 transitions[temp_state][current_state] += 1
                 temp_state = current_state
-                
+
         transitions[temp_state]["End"] += 1
 
     # Step 3: Convert tallies to probabilities
@@ -125,8 +124,8 @@ def calculate_transitions_matrix(msa, states_seq):
 
     for state, counts in transitions.items():
         total_transitions = sum(counts.values())
-        
-        valid_paths = len(counts) 
+
+        valid_paths = len(counts)
         divisor = total_transitions + (valid_paths * pseudocount)
 
         for next_state in counts.keys():

@@ -2,11 +2,7 @@ from itertools import product
 
 import numpy as np
 
-ALPHA = 1  # ID: p19153 ends in an odd number
-
-SAME = 1
-DIFF = -ALPHA / 2
-DELTA = -ALPHA
+from src.settings import DELTA, DIFF, SAME
 
 
 def sim(char1, char2):
@@ -79,7 +75,9 @@ def msa(sequences):
 
         new_gap_indices = [i for i, char in enumerate(aligned_c) if char == "-"]
 
-        current_gap_indices = [i for i, char in enumerate(msa[0]) if char == "-"]
+        current_gap_indices = [
+            i for i, char in enumerate(msa[0]) if char == "-"
+        ]
 
         # Step 2: Insert old gaps in new alignment
         temp_new_seq = list(aligned_seq)

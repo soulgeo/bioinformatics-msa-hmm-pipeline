@@ -1,5 +1,5 @@
-from collections import Counter
 import random
+from collections import Counter
 
 ALPHABET = {"A", "C", "G", "T"}
 PATTERNS = ["AGATTA", "ACTTTGCA", "AACTGGCAA", "CATTCAGT"]
