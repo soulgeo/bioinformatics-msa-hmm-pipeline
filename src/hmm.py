@@ -20,17 +20,9 @@ def create_states_sequence(msa):
 
 
 def calculate_emissions_matrix(msa, states_seq):
-    emissions = {}
+    emissions = defaultdict(lambda: defaultdict(float))
 
-    # Step 1: Pre-initialize ALL required states
-    num_matches = states_seq.count(MATCH)
-
-    for k in range(num_matches + 1):
-        emissions[f"I{k}"] = {letter: 0 for letter in ALPHABET}
-        if k > 0:
-            emissions[f"M{k}"] = {letter: 0 for letter in ALPHABET}
-
-    # Step 2: Calculate the tallies
+    # Step 1: Calculate the tallies
     match_counter = 0
 
     # Iterate over all columns and add letters directly to their pre-made buckets
@@ -49,19 +41,27 @@ def calculate_emissions_matrix(msa, states_seq):
             if letter in ALPHABET:
                 emissions[state_key][letter] += 1
 
-    # Step 3: Convert tallies to probabilities
-    # probabilities of 0 will break Viterbi algorithm, so add a small pseudocount
+    # Step 2: Convert tallies to probabilities
+    # Probabilities of 0 will break Viterbi algorithm, so add a small pseudocount
     pseudocount = 0.01
 
-    for state, counts in emissions.items():
+    # Make sure all states exist in the final matrix, even unobserved ones.
+    num_matches = states_seq.count(MATCH)
+    all_possible_states = [f"I{k}" for k in range(num_matches + 1)] + \
+                         [f"M{k}" for k in range(1, num_matches + 1)]
+
+    final_emissions = {}
+    for state in all_possible_states:
+        counts = emissions[state]
         total_chars = sum(counts.values())
         divisor = total_chars + (len(ALPHABET) * pseudocount)
-
-        for letter in ALPHABET:
-            prob = (counts[letter] + pseudocount) / divisor
-            emissions[state][letter] = prob
-
-    return emissions
+        
+        final_emissions[state] = {
+            letter: (counts[letter] + pseudocount) / divisor 
+            for letter in ALPHABET
+        }
+            
+    return final_emissions
 
 
 def calculate_transitions_matrix(msa, states_seq):
