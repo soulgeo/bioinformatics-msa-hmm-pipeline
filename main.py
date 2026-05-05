@@ -41,10 +41,9 @@ def main():
     datasets = {}
     for char in ['a', 'b', 'c']:
         datasets[char] = []
-        file = open(f"datasets/dataset_{char}.txt", "r")
-        for line in file:
-            datasets[char].append(line.strip())
-        file.close()
+        with open(f"datasets/dataset_{char}.txt", "r") as f:
+            for line in f:
+                datasets[char].append(line.strip())
 
     msa_a = msa(datasets['a'])
 
