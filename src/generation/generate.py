@@ -21,15 +21,14 @@ def generate_gene_from_patterns():
         gene.append(random.choice(list(ALPHABET)))
 
     # b) Process patterns with mutations
-    a_count = random.randint(A_MIN, A_MAX)
     for pattern in PATTERNS:
-        mutated = pattern.split()
+        mutated = list(pattern)
         b_count = random.randint(B_MIN, B_MAX)
         for _ in range(b_count):
             index = random.randint(0, len(mutated) - 1)
             mutated[index] = random.choice(list(ALPHABET | {""}))
 
-        gene.append(mutated)
+        gene.extend(mutated)
 
     # c) Random symbols at the end
     c_count = random.randint(C_MIN, C_MAX)

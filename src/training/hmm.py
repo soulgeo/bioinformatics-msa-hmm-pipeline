@@ -96,7 +96,7 @@ def calculate_transitions_matrix(msa, states_seq):
                 transitions[f"M{k}"]["End"] = 0.0
                 transitions[f"D{k}"]["End"] = 0.0
 
-    # Step 2: Calculate the tallies (Your exact logic here)
+    # Step 2: Calculate the tallies
     for seq in msa:
         temp_state = "Start"
         state_counter = 0
