@@ -41,10 +41,10 @@ def main():
 
     msa_a = msa(datasets['a'])
 
-    # 1. Build the Initial Draft HMM (from Dataset A)
+    # Build the Initial Draft HMM (from Dataset A)
     hmm = HMM.from_msa(msa_a)
 
-    # 2. & 3. Viterbi Training and Generating the Trained HMM
+    # Viterbi Training and Generating the Trained HMM
     hmm.train(datasets['b'])
 
     dataset_c_scores = []
@@ -52,7 +52,8 @@ def main():
         score = hmm.forward(gene)
         dataset_c_scores.append(score)
 
-    print(dataset_c_scores)
+    print("Dataset C scores:", dataset_c_scores)
+    print("")
 
     random_genes = [generate_random_gene() for _ in range(40)]
     random_genes_scores = []
@@ -60,7 +61,7 @@ def main():
         score = hmm.forward(gene)
         random_genes_scores.append(score)
 
-    print(random_genes_scores)
+    print("Random genes scores:", random_genes_scores)
 
 
 if __name__ == "__main__":
