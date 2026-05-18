@@ -15,9 +15,16 @@ class HMM:
     def from_msa(cls, msa):
         states_seq = cls._create_states_sequence(msa)
         num_matches = states_seq.count(MATCH)
-        emissions = cls._calculate_emissions_matrix(msa, states_seq)
-        transitions = cls._calculate_transitions_matrix(msa, states_seq)
-        return cls(num_matches, emissions, transitions)
+
+        # We temporarily create an instance to use helper methods
+        instance = cls(num_matches, {}, {})
+        instance.emissions = instance._calculate_emissions_matrix(
+            msa, states_seq
+        )
+        instance.transitions = instance._calculate_transitions_matrix(
+            msa, states_seq
+        )
+        return instance
 
     def decode(self, gene):
         """Finds the most likely path for a gene (Viterbi algorithm)."""
@@ -28,11 +35,10 @@ class HMM:
         # --- COLUMN 0 ---
         first_col = {}
         for state in states:
-            s_type = state[0]
             prob = self.transitions["Start"].get(state, 0)
             if (
                 prob > 0
-                and s_type != DELETE
+                and state[0] != DELETE
                 and gene[0] in self.emissions[state]
             ):
                 first_col[state] = math.log(prob) + math.log(
@@ -46,10 +52,11 @@ class HMM:
         # --- COLUMNS 1 to N ---
         for i in range(1, len(gene)):
             char = gene[i]
-            curr_col = {}
-            newpath = {}
+            curr_col, newpath = {}, {}
 
-            def get_best_jump(target, possible_prevs, prev_matrix, is_delete=False):
+            def get_best_jump(
+                target, possible_prevs, prev_matrix, is_delete=False
+            ):
                 candidates = []
                 for p in possible_prevs:
                     if (
@@ -70,41 +77,43 @@ class HMM:
             for state in states:
                 s_type, num = state[0], int(state[1:])
                 if s_type == MATCH:
-                    possible_prevs = [f"M{num-1}", f"I{num-1}", f"D{num-1}"]
-                    score, best_p = get_best_jump(state, possible_prevs, m[i - 1])
+                    prevs = [f"M{num-1}", f"I{num-1}", f"D{num-1}"]
                 elif s_type == INSERT:
-                    possible_prevs = [f"M{num}", state, f"D{num}"]
-                    score, best_p = get_best_jump(state, possible_prevs, m[i - 1])
+                    prevs = [f"M{num}", state, f"D{num}"]
                 else:
                     continue
-                curr_col[state] = score
-                newpath[state] = path.get(best_p, []) + [state]
+
+                score, best_p = get_best_jump(state, prevs, m[i - 1])
+                curr_col[state], newpath[state] = score, path.get(
+                    best_p, []
+                ) + [state]
 
             # PASS 2: Calculate D
             for state in states:
                 if state[0] == DELETE:
                     num = int(state[1:])
-                    possible_prevs = [f"M{num-1}", f"D{num-1}"]
                     score, best_p = get_best_jump(
-                        state, possible_prevs, curr_col, is_delete=True
+                        state,
+                        [f"M{num-1}", f"D{num-1}"],
+                        curr_col,
+                        is_delete=True,
                     )
-                    curr_col[state] = score
-                    newpath[state] = newpath.get(best_p, []) + [state]
+                    curr_col[state], newpath[state] = score, newpath.get(
+                        best_p, []
+                    ) + [state]
 
             m.append(curr_col)
             path = newpath
 
-        best_final_score = -1e9
-        best_last_state = None
+        # Find best end state
+        best_score, last_state = -1e9, None
         for state, score in m[-1].items():
-            jump_to_end = self.transitions[state].get("End", 0)
-            if jump_to_end > 0:
-                final_score = score + math.log(jump_to_end)
-                if final_score > best_final_score:
-                    best_final_score = final_score
-                    best_last_state = state
+            if (jump := self.transitions[state].get("End", 0)) > 0:
+                final_score = score + math.log(jump)
+                if final_score > best_score:
+                    best_score, last_state = final_score, state
 
-        return path.get(best_last_state, [])
+        return path.get(last_state, [])
 
     def forward(self, gene):
         """Calculates the forward score for a gene (Forward algorithm)."""
@@ -112,7 +121,7 @@ class HMM:
         m = []
 
         # --- COLUMN 0 ---
-        first_col = {}
+        first_col = {s: -1e9 for s in states}
         for state in states:
             prob = self.transitions["Start"].get(state, 0)
             if (
@@ -123,8 +132,6 @@ class HMM:
                 first_col[state] = math.log(prob) + math.log(
                     self.emissions[state][gene[0]]
                 )
-            else:
-                first_col[state] = -1e9
         m.append(first_col)
 
         # --- COLUMNS 1 to N ---
@@ -132,8 +139,10 @@ class HMM:
             char = gene[i]
             curr_col = {}
 
-            def get_total_jump(target, possible_prevs, prev_matrix, is_delete=False):
-                candidates = []
+            def get_total_jump(
+                target, possible_prevs, prev_matrix, is_delete=False
+            ):
+                scores = []
                 for p in possible_prevs:
                     if (
                         p in prev_matrix
@@ -142,8 +151,8 @@ class HMM:
                         score = prev_matrix[p] + math.log(jump)
                         if not is_delete and char in self.emissions[target]:
                             score += math.log(self.emissions[target][char])
-                        candidates.append(score)
-                return self._log_sum_exp(candidates)
+                        scores.append(score)
+                return self._log_sum_exp(scores)
 
             # PASS 1: Calculate M and I
             for state in states:
@@ -162,18 +171,20 @@ class HMM:
                 if state[0] == DELETE:
                     num = int(state[1:])
                     curr_col[state] = get_total_jump(
-                        state, [f"M{num-1}", f"D{num-1}"], curr_col, is_delete=True
+                        state,
+                        [f"M{num-1}", f"D{num-1}"],
+                        curr_col,
+                        is_delete=True,
                     )
             m.append(curr_col)
 
-        # --- TERMINATION ---
-        final_candidates = []
-        for state, score in m[-1].items():
-            jump_to_end = self.transitions[state].get("End", 0)
-            if jump_to_end > 0:
-                final_candidates.append(score + math.log(jump_to_end))
-
-        return self._log_sum_exp(final_candidates)
+        # TERMINATION
+        final_scores = [
+            m[-1][s] + math.log(jump)
+            for s in m[-1]
+            if (jump := self.transitions[s].get("End", 0)) > 0
+        ]
+        return self._log_sum_exp(final_scores)
 
     def train(self, dataset):
         """Performs Viterbi training on a dataset."""
@@ -182,71 +193,61 @@ class HMM:
         self._retrain_transitions(paths)
 
     def _retrain_emissions(self, dataset, paths):
-        emissions_tally = defaultdict(lambda: defaultdict(float))
+        tally = defaultdict(lambda: defaultdict(float))
         for seq, path in zip(dataset, paths):
-            char_index = 0
+            char_idx = 0
             for state in path:
-                if state.startswith("D"):
-                    continue
-                char = seq[char_index]
-                emissions_tally[state][char] += 1
-                char_index += 1
+                if not state.startswith("D"):
+                    tally[state][seq[char_idx]] += 1
+                    char_idx += 1
 
-        pseudocount = 0.01
-        all_possible_states = [f"I{k}" for k in range(self.num_matches + 1)] + [
+        all_states = [f"I{k}" for k in range(self.num_matches + 1)] + [
             f"M{k}" for k in range(1, self.num_matches + 1)
         ]
-
-        final_emissions = {}
-        for state in all_possible_states:
-            counts = emissions_tally[state]
-            total_chars = sum(counts.values())
-            divisor = total_chars + (len(ALPHABET) * pseudocount)
-            final_emissions[state] = {
-                letter: (counts.get(letter, 0) + pseudocount) / divisor
-                for letter in ALPHABET
-            }
-        self.emissions = final_emissions
+        self.emissions = {
+            s: self._normalize(tally[s], ALPHABET) for s in all_states
+        }
 
     def _retrain_transitions(self, paths):
-        transitions_tally = {}
-        # Pre-initialize topology
-        transitions_tally["Start"] = {"M1": 0.0, "D1": 0.0, "I0": 0.0}
-        for k in range(self.num_matches + 1):
-            transitions_tally[f"I{k}"] = {f"I{k}": 0.0}
-            if k < self.num_matches:
-                transitions_tally[f"I{k}"][f"M{k+1}"] = 0.0
-                transitions_tally[f"I{k}"][f"D{k+1}"] = 0.0
-            else:
-                transitions_tally[f"I{k}"]["End"] = 0.0
-            if k > 0:
-                transitions_tally[f"M{k}"] = {f"I{k}": 0.0}
-                transitions_tally[f"D{k}"] = {f"I{k}": 0.0}
-                if k < self.num_matches:
-                    transitions_tally[f"M{k}"][f"M{k+1}"] = 0.0
-                    transitions_tally[f"M{k}"][f"D{k+1}"] = 0.0
-                    transitions_tally[f"D{k}"][f"M{k+1}"] = 0.0
-                    transitions_tally[f"D{k}"][f"D{k+1}"] = 0.0
-                else:
-                    transitions_tally[f"M{k}"]["End"] = 0.0
-                    transitions_tally[f"D{k}"]["End"] = 0.0
-
+        tally = self._get_empty_transitions()
         for path in paths:
-            prev_state = "Start"
-            for current_state in path:
-                transitions_tally[prev_state][current_state] += 1
-                prev_state = current_state
-            transitions_tally[prev_state]["End"] += 1
+            prev = "Start"
+            for state in path:
+                tally[prev][state] += 1
+                prev = state
+            tally[prev]["End"] += 1
 
+        self.transitions = {
+            s: self._normalize(counts) for s, counts in tally.items()
+        }
+
+    def _get_empty_transitions(self):
+        """Pre-initializes the strict HMM topology."""
+        trans = {"Start": {"M1": 0.0, "D1": 0.0, "I0": 0.0}}
+        for k in range(self.num_matches + 1):
+            trans[f"I{k}"] = {f"I{k}": 0.0}
+            if k < self.num_matches:
+                trans[f"I{k}"].update({f"M{k+1}": 0.0, f"D{k+1}": 0.0})
+            else:
+                trans[f"I{k}"]["End"] = 0.0
+
+            if k > 0:
+                trans[f"M{k}"] = {f"I{k}": 0.0}
+                trans[f"D{k}"] = {f"I{k}": 0.0}
+                if k < self.num_matches:
+                    for s in [f"M{k}", f"D{k}"]:
+                        trans[s].update({f"M{k+1}": 0.0, f"D{k+1}": 0.0})
+                else:
+                    trans[f"M{k}"]["End"] = 0.0
+                    trans[f"D{k}"]["End"] = 0.0
+        return trans
+
+    def _normalize(self, tally, alphabet=None):
+        """Converts tallies to probabilities with pseudocounts."""
         pseudocount = 0.01
-        for state, counts in transitions_tally.items():
-            total_transitions = sum(counts.values())
-            valid_paths = len(counts)
-            divisor = total_transitions + (valid_paths * pseudocount)
-            for next_state in counts.keys():
-                prob = (counts[next_state] + pseudocount) / divisor
-                transitions_tally[state][next_state] = prob
-        self.transitions = transitions_tally
+        keys = alphabet if alphabet is not None else tally.keys()
+        total = sum(tally.values()) + (len(keys) * pseudocount)
+        return {k: (tally.get(k, 0) + pseudocount) / total for k in keys}
 
     @staticmethod
     def _log_sum_exp(log_probs):
@@ -261,92 +262,42 @@ class HMM:
     @staticmethod
     def _create_states_sequence(msa):
         states_seq = []
-        cols = len(msa[0])
-        for i in range(cols):
-            gaps = sum(1 for seq in msa if seq[i] == "-")
-            states_seq.append(MATCH if gaps < len(msa) // 2 else INSERT)
+        for col in zip(*msa):
+            gaps = col.count("-")
+            states_seq.append(MATCH if gaps < len(msa) / 2 else INSERT)
         return states_seq
 
-    @staticmethod
-    def _calculate_emissions_matrix(msa, states_seq):
-        emissions = defaultdict(lambda: defaultdict(float))
-        match_counter = 0
-        for i in range(len(states_seq)):
-            current_type = states_seq[i]
-            if current_type == MATCH:
-                match_counter += 1
-                state_key = f"M{match_counter}"
-            else:
-                state_key = f"I{match_counter}"
+    def _calculate_emissions_matrix(self, msa, states_seq):
+        tally, match_cnt = defaultdict(lambda: defaultdict(float)), 0
+        for i, s_type in enumerate(states_seq):
+            if s_type == MATCH:
+                match_cnt += 1
+            key = f"{s_type}{match_cnt}"
             for seq in msa:
-                letter = seq[i]
-                if letter in ALPHABET:
-                    emissions[state_key][letter] += 1
+                if (char := seq[i]) in ALPHABET:
+                    tally[key][char] += 1
 
-        pseudocount = 0.01
-        num_matches = states_seq.count(MATCH)
-        all_possible_states = [f"I{k}" for k in range(num_matches + 1)] + [
-            f"M{k}" for k in range(1, num_matches + 1)
+        all_states = [f"I{k}" for k in range(self.num_matches + 1)] + [
+            f"M{k}" for k in range(1, self.num_matches + 1)
         ]
-        final_emissions = {}
-        for state in all_possible_states:
-            counts = emissions[state]
-            total_chars = sum(counts.values())
-            divisor = total_chars + (len(ALPHABET) * pseudocount)
-            final_emissions[state] = {
-                letter: (counts[letter] + pseudocount) / divisor
-                for letter in ALPHABET
-            }
-        return final_emissions
+        return {s: self._normalize(tally[s], ALPHABET) for s in all_states}
 
-    @staticmethod
-    def _calculate_transitions_matrix(msa, states_seq):
-        transitions = {}
-        num_matches = states_seq.count(MATCH)
-        transitions["Start"] = {"M1": 0.0, "D1": 0.0, "I0": 0.0}
-        for k in range(num_matches + 1):
-            transitions[f"I{k}"] = {f"I{k}": 0.0}
-            if k < num_matches:
-                transitions[f"I{k}"][f"M{k+1}"] = 0.0
-                transitions[f"I{k}"][f"D{k+1}"] = 0.0
-            else:
-                transitions[f"I{k}"]["End"] = 0.0
-            if k > 0:
-                transitions[f"M{k}"] = {f"I{k}": 0.0}
-                transitions[f"D{k}"] = {f"I{k}": 0.0}
-                if k < num_matches:
-                    transitions[f"M{k}"][f"M{k+1}"] = 0.0
-                    transitions[f"M{k}"][f"D{k+1}"] = 0.0
-                    transitions[f"D{k}"][f"M{k+1}"] = 0.0
-                    transitions[f"D{k}"][f"D{k+1}"] = 0.0
-                else:
-                    transitions[f"M{k}"]["End"] = 0.0
-                    transitions[f"D{k}"]["End"] = 0.0
-
+    def _calculate_transitions_matrix(self, msa, states_seq):
+        tally = self._get_empty_transitions()
         for seq in msa:
-            temp_state = "Start"
-            state_counter = 0
+            prev, match_cnt = "Start", 0
             for i, char in enumerate(seq):
-                current_type = states_seq[i]
-                if current_type == MATCH:
-                    state_counter += 1
-                if char != "-":
-                    current_state = f"{current_type}{state_counter}"
-                    transitions[temp_state][current_state] += 1
-                    temp_state = current_state
-                    continue
-                if current_type == MATCH:
-                    current_state = f"D{state_counter}"
-                    transitions[temp_state][current_state] += 1
-                    temp_state = current_state
-            transitions[temp_state]["End"] += 1
+                if states_seq[i] == MATCH:
+                    match_cnt += 1
 
-        pseudocount = 0.01
-        for state, counts in transitions.items():
-            total_transitions = sum(counts.values())
-            valid_paths = len(counts)
-            divisor = total_transitions + (valid_paths * pseudocount)
-            for next_state in counts.keys():
-                prob = (counts[next_state] + pseudocount) / divisor
-                transitions[state][next_state] = prob
-        return transitions
+                if char != "-":
+                    curr = f"{states_seq[i]}{match_cnt}"
+                elif states_seq[i] == MATCH:
+                    curr = f"D{match_cnt}"
+                else:
+                    continue
+
+                tally[prev][curr] += 1
+                prev = curr
+            tally[prev]["End"] += 1
+        return {s: self._normalize(counts) for s, counts in tally.items()}
